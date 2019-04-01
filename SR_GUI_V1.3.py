@@ -1,10 +1,3 @@
-print("Hello World!")
-print("Welcome")
-1+1
-
-
-
-
 # Below are the images needed: The package is sys is used for system specific functions and parameters, re for handling the functions in regular
 # expression, speech_recognition for handling the speech recognition, googletrans package for the translation and to work with GUI and related
 # widgets use the tkinter.ttk and tkinter.
@@ -14,9 +7,10 @@ import re
 from tkinter import messagebox
 import speech_recognition as sr
 from tkinter import *
+import os
 from googletrans import Translator as gt
 
-# Global variables for error and dictionary to store the key and value of language code and country
+# Global variables for error and dictionary to store the key, value of language code and country, translate country and code
 
 speech_languages = {"af-ZA": "Afrikaans (South Africa)", "am-ET": "Amharic (Ethiopia)", "hy-AM": "Armenian (Armenia)",
                     "az-AZ": "Azerbaijani (Azerbaijan)",
@@ -119,119 +113,202 @@ class SR_GUI(Frame):
     def __init__(self, master):
         Frame.__init__(self, master=None)
         self.master = master
-        self.master.config(bg="teal")
-        self.master.title("Speech Recognition")
+        self.master.config(bg="#D95137")
+        self.master.title("Speech Recognition & Translation Tool")
+        #self.master.iconbitmap('mul_logo.ico')
         self.add_widgets()
 
-    # In add_widgets() we are creating the widgets
+    # In add_widgets() we are creating the widgets.# Use can use grid(),place() or pack() to place the widget in the frame or window.
+
     def add_widgets(self):
         self.combo_speech_var = StringVar()
-        # Use can use grid(),place() or pack() to place the widget in the frame or window.
-        # Label widget creation
-        # Retrieving all the languages dictionary values and converting to list as we are passing as input to the combobox
-        self.speech_lang_values = list(speech_languages.values())
+        self.combo_var = StringVar()
+        # Adding logo and the title
+        self.photo = PhotoImage(file='sau-logo1.png')
+        self.logoLabel = Label(root, image=self.photo,bg="#D95137")
+        self.logoLabel.place(x=70,y=20)
+        self.logoLabel2 = Label(root, text="Speech Recognition & Translation Tool", bg="#D95137", fg="#F1CC01", font="none 20 bold", wraplength=300)
+        self.logoLabel2.place(x=185, y=40)
+
+        # Retrieving all the languages dictionary values, sorting and converting to list as we are passing as input to the combobox
+        self.speech_lang_values = sorted(list(speech_languages.values()))
         # Retrieving all the languages dictionary keys as we want to pass to the destination field during the translation
         self.speech_lang_keys = list(speech_languages.keys())
-        label_speech_language = Label(self.master, text="Talking in:", bg="Teal")
-        label_speech_language.place(x=0, y=20)
+
+
+        # Language to translate Keys and Values. Already in sorted order
+        self.lang_values = list(languages.values())
+        # Retrieving all the languages dictionary keys as we want to pass to the destination field during the translation
+        self.lang_keys = list(languages.keys())
+        self.lang_values_Capitalize = [self.lang_value.capitalize() for self.lang_value in self.lang_values]
+
+        #=================================Speaking Part==============================================
+
+        # Labels for "Speaking In" and "You said"
+        label_speech_language = Label(self.master, text="Speaking in:", bg="#D95137", font="none 10 bold")
+        label_speech_language.place(x=0, y=160)
+
+        label_yousaid = Label(self.master, text="You Said:", bg="#D95137", bd=3, font="none 10 bold")
+        label_yousaid.place(x=0, y=220)
+
+        # Languages Comboxbox you can speak in. By default is "English (United States)"
         self.combo_speech = Combobox(self.master, values=self.speech_lang_values, textvariable=self.combo_speech_var)
         self.combo_speech.bind("<<ComboboxSelected>>", self.speech_Callbackfunc)
+        self.combo_speech.bind("<KeyPress>", self.searchList)
+        self.combo_speech.bind("<Return>",self.returnEvent)
+        self.combo_speech.bind("<Down>",self.arrowEvent)
+        #self.combo_speech.bind("<Up>",self.arrowEvent)
         self.combo_speech.set("English (United States)")
-        print("2****************")
-        self.combo_speech.place(x=100, y=20)
+        self.combo_speech.place(x=120, y=160)
+        self.combo_speech.focus_set()
 
-        #print("Selected Speech Language" + ":" + self.selected_speech_value)
-        label_yousaid = Label(self.master, text="You Said:", bg="teal", bd=3)
-        label_yousaid.place(x=0, y=70)
+
+
         # Textarea creation. Non editable as set state to DISABLED
         text_area = Text(self.master, width=50, height=5, state=DISABLED)
-        text_area.place(x=100, y=50)
-        # referenced the text_area to self.ta as it has to be used in other functions
+        text_area.place(x=120, y=190)
+
+        # Referenced the text_area to self.ta as it has to be used in other functions
         self.ta = text_area
         # Button Creation. On Button click it'll call the method self.add_text and set the text_area to "Listening...."
-        button1 = Button(text="Click here to listen", command=self.add_text)
-        button1.place(x=190, y=150)
-        # To trace the tkinker variables we create the wrapper variable
-        var = IntVar()
-        # The labelframe_widget creation. Created to hold the radio_buttons, frame , label and combobox
-        self.labelframe_widget = LabelFrame(self.master, text="Translation", width=490, height=170, bg="Teal")
-        self.labelframe_widget.place(x=5, y=180)
-        # Label creation
-        label1 = Label(self.labelframe_widget, text="Select the radiobutton if you want to translate the text",
-                       bg="Teal")
-        label1.place(x=5, y=20)
-        # Radio Button creation and set the state to DISABLED as don't want to enable for error messages. When loaded they are in DISABLED state
-        self.yes_radiobutton = Radiobutton(self.labelframe_widget, text="Yes", variable=var, value=1, bg="Teal",
-                                           state=DISABLED)
-        self.yes_radiobutton.place(x=5, y=60)
-        self.no_radiobutton = Radiobutton(self.labelframe_widget, text="No", variable=var, value=2, bg="Teal",
-                                          state=DISABLED)
-        self.no_radiobutton.place(x=5, y=90)
+        button1 = Button(text="Click here to speak", command=self.add_text, font="none 10")
+        button1.place(x=240, y=300)
 
-        print("self_ta value:" + self.ta.get(1.0, END))
-        # Frame creation to hold the label and combobox
-        self.frame_selection = Frame(self.labelframe_widget, bg="Teal", width=340, height=40)
-        self.var_radio = var;
-        print("The value of the radio button:" + str(self.var_radio.get()))
-        label_translate = Label(self.master, text="Translated Text:", bg="teal")
+        #===================================Translation Part==========================================
+
+        self.label_combo = Label(self.master, text="Translate To:", bg="#D95137", font="none 10 bold")
+        self.label_combo.place(x=5, y=350)
+
+        self.combo_translate = Combobox(self.master, height=6, textvariable=self.combo_var,values=sorted(self.lang_values_Capitalize))
+        # Setting the default value of the combobox to "Select" instead of empty
+        self.combo_translate.set("Select")
+        self.combo_translate.bind("<<ComboboxSelected>>", self.callbackFunc)
+        self.combo_translate.bind("<KeyPress>", self.searchList1)
+        self.combo_translate.bind("<Return>", self.returnEvent1)
+        self.combo_translate.bind("<Down>", self.arrowEvent1)
+
+
+        self.combo_translate.place(x=120, y=350)
+
+        label_translate = Label(self.master, text="Translated Text:", bg="#D95137", font="none 10 bold")
         label_translate.place(x=5, y=410)
+
         self.text_area_translate = Text(self.master, width=50, height=5, state=DISABLED)
         self.text_area_translate.place(x=120, y=380)
-        self.translate_button=Button(self.master,text="Click Here to Translate", bg="Teal",state=DISABLED)
-        self.translate_button.place(x=200, y=490)
-        cancel_button=Button(self.master, text="Reset", bg="Teal",command=self.on_Cancel,width=10)
-        cancel_button.place(x=150,y=540)
-        quit_button=Button(self.master,text="Quit",bg="Teal",command=self.master.destroy,width=10)
-        quit_button.place(x=300,y=540)
+
+        self.translate_button = Button(self.master, text="Click Here to Translate", font="none 10",command=self.translate_text)
+        self.translate_button.place(x=240, y=490)
+        cancel_button = Button(self.master, text="Reset", command=self.on_Cancel, width=10, font="none 10")
+        cancel_button.place(x=180, y=540)
+        quit_button = Button(self.master, text="Quit", command=self.master.destroy, width=10, font="none 10")
+        quit_button.place(x=330, y=540)
+
+    #=========================Events and Method Calls=====================================
+
+    def searchList(self, event):
+        print("In searchList. Called by the event Key Press")
+        if self.combo_speech_var.get() in self.speech_lang_values:
+            print("Value of combo_speech_var.get:"+self.combo_speech_var.get())
+            self.combo_speech_var.set("")
+            self.combo_speech.focus_set()
+            self.combo_speech.bind("<KeyRelease>", self.newSearchEvent)
+
+    def newSearchEvent(self, event):
+        print("In newSearchEvent. Called by the event KeyRelease")
+        value = event.widget.get().upper()
+        print("Converted the value of the key press to upper:"+value)
+        for index, value_name in enumerate(self.speech_lang_values):
+            if value_name[0] == value:
+                self.combo_speech.current(index)
+                break
+
+    def returnEvent(self,event):
+        self.combo_speech_var.set(self.combo_speech_var.get())
+        self.speech_Callbackfunc()
+
+    def arrowEvent(self,event):
+        self.combo_speech.set(self.combo_speech_var.get())
+    def arrowEvent1(self,event):
+
+        self.combo_translate.set(self.combo_var.get())
+
+
+    def searchList1(self, event):
+        print("In searchList1. Called by the event Key Press")
+        self.combo_var.set("")
+        self.combo_translate.focus_set()
+        self.combo_translate.bind("<KeyRelease>", self.newSearchEvent1)
+
+    def newSearchEvent1(self, event):
+        print("In newSearchEvent1. Called by the event KeyRelease")
+        value = event.widget.get().upper()
+        print("Value in new Event:"+value)
+        print("Converted the value of the key press to upper:"+value)
+        for index, value_name in enumerate(sorted(self.lang_values_Capitalize)):
+            if value_name[0] == value:
+                self.combo_translate.current(index)
+                break
+
+
+    def returnEvent1(self, event):
+        self.combo_var.set(self.combo_var.get())
+        self.callbackFunc(event)
+
+    # Method to insert text into the text area adjust to "You said" label
+    def add_text(self):
+        if self.combo_speech_var.get()!="":
+            if self.combo_speech_var.get() == "English (United States)":
+                self.selected_speech_keys = [key for (key, value) in speech_languages.items() if value == "English (United States)"]
+                self.final_sk = re.sub('[^-a-z-A-Z]', '', str(self.selected_speech_keys))
+                print("Selected Language to Speak:"+self.final_sk)
+                self.combo_translate.set("Select")
+                self.ta.configure(state=NORMAL)
+                self.ta.delete(1.0, END)
+                self.ta.insert(END, "Listening....")
+                self.text_area_translate.configure(state=NORMAL)
+                self.text_area_translate.delete(1.0, END)
+                self.text_area_translate.configure(state=DISABLED)
+                self.ta.update()
+                self.speech_recog()
+            else:
+                self.selected_speech_keys = [key for (key, value) in speech_languages.items() if value == self.selected_speech_value]
+                self.final_sk = re.sub('[^-a-z-A-Z]', '', str(self.selected_speech_keys))
+                print("Selected Language to Speak:" + self.final_sk)
+                self.combo_translate.set("Select")
+                self.ta.configure(state=NORMAL)
+                self.ta.delete(1.0, END)
+                self.ta.insert(END, "Listening....")
+                self.text_area_translate.configure(state=NORMAL)
+                self.text_area_translate.delete(1.0, END)
+                self.text_area_translate.configure(state=DISABLED)
+                self.ta.update()
+                self.speech_recog()
+        else:
+            self.combo_speech_var.set("English (United States)")
+            self.add_text()
+
 
     def on_Cancel(self):
         self.combo_speech.set("English (United States)")
         self.ta.configure(state=NORMAL)
         self.ta.delete(1.0, END)
         self.ta.configure(state=DISABLED)
-        self.yes_radiobutton.configure(state=DISABLED)
-        self.no_radiobutton.configure(state=DISABLED)
-        self.var_radio.set(0)
         self.text_area_translate.configure(state=NORMAL)
         self.text_area_translate.delete(1.0, END)
         self.text_area_translate.configure(state=DISABLED)
-        self.remove_widgets()
-        self.translate_button.configure(state=DISABLED)
-
-    # Method to remove the widgets in the frame_selection. This will remove any widgets in the window. As there are only two widgets using this.
-    # Always use the destroy() to remove permanently or place_forget(), grid_forget(), pack_forget() or lower() to remove temporarly
-    def remove_widgets(self):
-        for widgets_items in self.frame_selection.winfo_children():
-            widgets_items.destroy()
+        self.combo_translate.set("Select")
+        #self.translate_button.configure(state=DISABLED)
 
     # Event for the language combo box where user selects the desired language to speak
     def speech_Callbackfunc(self, event):
         self.selected_speech_value = self.combo_speech_var.get()
         print("Callback:"+self.selected_speech_value)
 
-    # In this method we are setting the radio button state to 0 and setting the textarea to "Listening...." and calling the speech_recog() method.
-    # This method is called whenever the button click takes place
-    def add_text(self):
-        if self.combo_speech_var.get() == "English (United States)":
-            self.selected_speech_keys = [key for (key, value) in speech_languages.items() if
-                                         value == "English (United States)"]
-            print(self.selected_speech_keys)
-        else:
-            self.selected_speech_keys = [key for (key, value) in speech_languages.items() if
-                                         value == self.selected_speech_value]
-        self.final_sk = re.sub('[^-a-z-A-Z]', '', str(self.selected_speech_keys))
-        self.var_radio.set(0)
-        self.remove_widgets()
-        self.ta.configure(state=NORMAL)
-        self.ta.delete(1.0, END)
-        print("****")
-        self.ta.insert(END, "Listening....")
-        self.text_area_translate.configure(state=NORMAL)
-        self.text_area_translate.delete(1.0, END)
-        self.text_area_translate.configure(state=DISABLED)
-        self.ta.update()
-        self.speech_recog()
 
+    # Event for the language combo box where user selects the desired language to translate
+    def callbackFunc(self, event):
+        self.selected_value = self.combo_var.get().lower()
+        print("Selected Language" + ":" + self.selected_value)
 
     # In this method we are creating object for speechrecognition and selecting the engine we want to use.
     def speech_recog(self):
@@ -260,97 +337,50 @@ class SR_GUI(Frame):
             self.ta.delete(1.0, END)
             self.ta.insert(END, self.a_text)
             self.ta.configure(state=DISABLED)
-            # By default textarea contains the newline. Check if its "\n. And set the radiobuttons to the enable state and call the combo_box method
-            if self.ta.get(1.0, END) != "\n":
-                print("Inside speech_recog function if")
-                self.yes_radiobutton.configure(state=NORMAL, command=self.combo_box)
-                self.no_radiobutton.configure(state=NORMAL, command=self.combo_box)
-                # self.yes_radiobutton.configure(state=NORMAL,command=self.selected_rb)
-                # self.no_radiobutton.configure(state=NORMAL, command=self.selected_rb)
-            # In the exception we disabling the radiobuttons and inserting the error message inside the textarea
+            # In the exception we disabling the radio buttons and inserting the error message inside the textarea
         except sr.UnknownValueError:
             print("Google Speech Recognition could not understand audio")
             self.ta.delete("1.0", END)
             self.ta.insert(END, "Click the button to try again")
             self.ta.configure(state=DISABLED)
             messagebox.showwarning("Warning", (error + "\n" + "Try Again....!"))
-            self.yes_radiobutton.configure(state=DISABLED)
-            self.no_radiobutton.configure(state=DISABLED)
-
-    # Inside this method we are creating the label and the combobox widget and loading the combobox with the values of the language dictionary
-    def combo_box(self):
-        self.combo_var = StringVar()
-
-        self.label_combo = Label(self.frame_selection, text="Select Language:", bg="Teal")
-        self.combo_widget = Combobox(self.frame_selection, height=6, textvariable=self.combo_var)
-        # If the radiobutton selected is Yes then it'll display the widget combobox and label
-        if self.var_radio.get() == 1:
-            # Retrieving all the languages dictionary values and converting to list as we are passing as input to the combobox
-            self.lang_values = list(languages.values())
-            # Retrieving all the languages dictionary keys as we want to pass to the destination field during the translation
-            self.lang_keys = list(languages.keys())
-            # As the list values are in lower, capitalizing the list
-            self.lang_values_Capitalize = [self.lang_value.capitalize() for self.lang_value in self.lang_values]
-            print(self.lang_values_Capitalize)
-            # Passing the values to the combobox using widget.configure
-            self.combo_widget.configure(values=self.lang_values_Capitalize)
-            # Setting the default value of the combobox to "Select" instead of empty
-            self.combo_widget.set("Select")
-            self.combo_widget.bind("<<ComboboxSelected>>", self.callbackFunc)
-            print("Button Click combo box:" + self.combo_var.get())
-            self.frame_selection.place(x=130, y=50)
-            # self.update()
-            self.label_combo.place(x=10, y=10)
-            self.combo_widget.place(x=132, y=10)
-            self.translate_button.configure(state=NORMAL,command=self.translate_text)
-
-        else:
-            # Messagebox creation which will display the  if there is no translation when "No" radiobutton is selected and all the widgets
-            # in the frame will be destroyed
-            # messagebox.showinfo("Translation", "No translation is available for this text")
-            self.remove_widgets()
-            # Call the insert_translation_text() where we are setting the translated text in the textbox or delete the translation if there is no
-            # translation available
-            self.insert_translation_text()
-            self.translate_button.configure(state=DISABLED)
-
-    # This method is called from the bind() in combo_box(). Finally we are converting the selected item to lower and calling the translate_text()
-    # where are retreiving the key for the value selected
-    def callbackFunc(self, event):
-        self.selected_value = self.combo_var.get().lower()
-        print("Selected Language" + ":" + self.selected_value)
-        #self.translate_text()
 
     # This method will retreive the key pass to the destination field in translator.translate()
     def translate_text(self):
-        self.selected_keys = [key for (key, value) in languages.items() if value == self.selected_value]
-        # Here we are extracting only the alphabets. As the keys we get in enclosed in the square brakets and single quotes
-        reg_key = re.sub('[^-a-zA-Z]', '', str(self.selected_keys))
-        print("Type of reg_key:")
-        print("reg_key:" + reg_key)
-        # Creating the object for translator
-        translator = gt()
-        self.text_after_translation = translator.translate(self.a_text, dest=reg_key)
-        print(self.text_after_translation)
-        self.insert_translation_text()
+        print("Getting combo_var:" + self.combo_var.get())
+        if self.combo_var.get()=="Select":
+            self.text_area_translate.configure(state=NORMAL)
+            self.text_area_translate.delete(1.0, END)
+            self.text_area_translate.configure(state=DISABLED)
+        else:
+            self.selected_keys = [key for (key, value) in languages.items() if value == self.selected_value.lower()]
+            # Here we are extracting only the alphabets. As the keys we get in enclosed in the square brakets and single quotes
+            reg_key = re.sub('[^-a-zA-Z]', '', str(self.selected_keys))
+            print("reg_key:" + reg_key)
+            # Creating the object for translator
+            translator = gt()
+            self.text_after_translation = translator.translate(self.a_text, dest=reg_key)
+            print(self.text_after_translation)
+            self.insert_translation_text()
 
     # This method will insert the translated text to the text_area_translate and delete the content in the text_area_translate if there is no
     # translation available
     def insert_translation_text(self):
-        if self.var_radio.get() == 1:
-            print("In translate_text")
-            self.text_area_translate.configure(state=NORMAL)
-            self.text_area_translate.delete(1.0, END)
-            self.text_area_translate.insert(1.0, self.text_after_translation.text)
-        else:
-            self.text_area_translate.configure(state=NORMAL)
-            self.text_area_translate.delete(1.0, END)
-            self.update()
-            messagebox.showinfo("Info", "Translation is not available for the text")
-        self.text_area_translate.configure(state=DISABLED)
+              if self.combo_var.get()!="":
+                print("Translated Text:"+self.text_after_translation.text)
+                self.text_area_translate.configure(state=NORMAL)
+                self.text_area_translate.delete(1.0, END)
+                self.text_area_translate.insert(1.0, self.text_after_translation.text)
+                self.text_area_translate.configure(state=DISABLED)
+              else:
+                  self.combo_var.set("Select")
+                  self.translate_text()
+
+
+
 root = Tk()
 # Set the dimensions of the window using geometry
-root.geometry("500x600")
+root.geometry("550x600")
 # Disable maximise
 root.resizable(width=0, height=0)
 my_sr = SR_GUI(root)
